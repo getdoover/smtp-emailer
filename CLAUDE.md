@@ -1,61 +1,49 @@
-# Doover App Template
+# SMTP Emailer
 
-A template for building device applications on the Doover IoT platform using pydoover 1.0.
+A Doover processor application that sends emails via SMTP when a message is published to a subscribed channel.
 
 ## Commands
 
 ```bash
 uv run pytest tests -v          # Run tests
 uv run export-config             # Write config_schema into doover_config.json
-uv run export-ui                 # Write ui_schema into doover_config.json (required to publish)
-doover app run                   # Run app + simulator locally via docker-compose
+./build.sh                       # Build Lambda deployment package (package.zip)
 ```
 
 ## Project Structure
 
 ```
-src/app_template/
-  __init__.py        # Entry point — run_app(SampleApplication())
-  application.py     # Main app class (setup, main_loop, UI handlers)
+src/smtp_emailer/
+  __init__.py        # Lambda handler entry point — handler(event, context)
+  application.py     # Main app class (setup, close, on_message_create)
   app_config.py      # Config schema — class-level declarations
-  app_tags.py        # Runtime state tags — bound to UI elements
-  app_ui.py          # UI definition — subclasses ui.UI
-  app_state.py       # State machine using pydoover.state.StateMachine
-simulators/sample/   # Simulator app that produces test data
+build.sh             # Build script for Lambda deployment zip
 tests/               # pytest suite
 ```
 
-## pydoover 1.0 Patterns
+## pydoover Processor Patterns
 
-This app uses the pydoover 1.0 declarative API. Key patterns:
+This app uses the pydoover processor (serverless/Lambda) pattern:
+
+### Handler Entry Point (__init__.py)
+- Exports `handler(event, context)` for Lambda
+- Calls `run_app(SmtpEmailerApplication(), event, context)` from `pydoover.processor`
+- Must call `SmtpEmailerConfig.clear_elements()` before each invocation
 
 ### Application class (application.py)
-- Set `config_cls`, `tags_cls`, `ui_cls` as class attributes — framework wires them up automatically
-- Override `async def setup()` for init and `async def main_loop()` for the periodic loop
-- Use `@ui.handler("element_name")` for UI interaction callbacks (signature: `self, ctx, value`)
-- Access config via `self.config.<field>.value`, tags via `self.tags.<name>.set(val)` / `.get()`
-- Cross-app tags: `self.get_tag("tag_name", app_key)`
-- Messaging: `await self.create_message(channel, {data})`
+- Inherits from `pydoover.processor.Application`
+- Set `config_cls` as class attribute — framework wires it up automatically
+- Override `async def setup()` for init, `async def close()` for cleanup
+- Override `async def on_message_create(event)` to handle channel messages
+- Access config via `self.config.<field>.value`
+- Tags: `self.get_tag(key, default)` (sync), `await self.set_tag(key, value)` (async)
 
 ### Config (app_config.py)
-- Subclass `config.Schema` with class-level `config.Boolean`, `config.String`, `config.Application`, etc.
-- `export()` is a classmethod: `SampleConfig.export(path, name)`
-
-### Tags (app_tags.py)
-- Subclass `Tags` with class-level `Tag("type", default=...)` declarations
-- Types: "boolean", "number", "integer", "string", "array", "object"
-
-### UI (app_ui.py)
-- Subclass `ui.UI` with class-level element declarations
-- Bind variables to tags: `ui.NumericVariable("Label", value=MyTags.field, name="id")`
-- Element types: `BooleanVariable`, `NumericVariable`, `TextVariable`, `Button`, `TextInput`, `FloatInput`, `Select`, `Submodule`
-- Use explicit `name=` kwarg on interactive elements to match handler names
-
-### State Machine (app_state.py)
-- Uses `pydoover.state.StateMachine` (wraps the `transitions` library)
-- Define `states` and `transitions` as class attributes, `on_enter_<state>()` callbacks
+- Subclass `config.Schema` with class-level `config.Boolean`, `config.String`, etc.
+- Include `ManySubscriptionConfig()` from `pydoover.processor` for channel subscriptions
+- `export()` calls `SmtpEmailerConfig.export(path, name)` (classmethod)
 
 ## Doover Skills
 
 If you have the doover-skills plugin installed, use `/doover` to see all available skills.
-Key skills: `/doover-device-apps` for device app development, `/pydoover` for API reference.
+Key skills: `/doover-cloud-apps` for processor/integration development, `/pydoover` for API reference.

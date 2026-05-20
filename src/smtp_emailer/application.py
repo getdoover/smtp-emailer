@@ -1,52 +1,141 @@
+import base64
 import logging
-import time
+import smtplib
+from datetime import datetime, timezone
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import formataddr
+from email import encoders
 
-from pydoover.docker import Application
-from pydoover import ui
+from pydoover.processor import Application
+from pydoover.models import MessageCreateEvent
 
 from .app_config import SmtpEmailerConfig
-from .app_tags import SampleTags
-from .app_ui import SmtpEmailerUI
-from .app_state import SmtpEmailerState
 
 log = logging.getLogger(__name__)
 
 
 class SmtpEmailerApplication(Application):
     config_cls = SmtpEmailerConfig
-    tags_cls = SampleTags
-    ui_cls = SmtpEmailerUI
-
     config: SmtpEmailerConfig
-    tags: SampleTags
 
     async def setup(self):
-        self.started = time.time()
-        self.state = SmtpEmailerState()
+        """Called once per invocation before event processing."""
+        pass
 
-    async def main_loop(self):
-        log.info(f"State is: {self.state.state}")
+    async def close(self):
+        """Called once per invocation after event processing."""
+        pass
 
-        # a random value we set inside our simulator. Go check it out in simulators/sample!
-        random_value = self.get_tag("random_value", self.config.sim_app_key.value)
-        log.info("Random value from simulator: %s", random_value)
+    async def on_message_create(self, event: MessageCreateEvent):
+        """Handle incoming email send requests."""
+        data = event.message.data
+        if not data:
+            log.warning("Received message with no data, skipping")
+            return
 
-        await self.tags.is_working.set(True)
-        await self.tags.battery_voltage.set(random_value)
-        await self.tags.uptime.set(time.time() - self.started)
+        try:
+            msg = self._build_message(data)
+            self._send_message(msg, data)
 
-    @ui.handler("send_alert")
-    async def on_send_alert(self, ctx, value):
-        output = self.tags.test_output.get()
-        log.info(f"Sending alert: {output}")
-        await self.create_message("significantAlerts", {"text": output})
-        await ctx.set_value(None)
+            # Update success tags
+            send_count = self.get_tag("send_count", 0)
+            await self.set_tag("send_count", send_count + 1)
+            await self.set_tag("last_send_status", "success")
+            await self.set_tag("last_send_time", datetime.now(timezone.utc).isoformat())
+            await self.set_tag("last_error", None)
 
-    @ui.handler("test_message")
-    async def on_text_parameter_change(self, ctx, value):
-        log.info(f"New value for test message: {value}")
-        await self.tags.test_output.set(value)
+            log.info("Email sent successfully to %s", data.get("to"))
 
-    @ui.handler("charge_mode")
-    async def on_state_command(self, ctx, value):
-        log.info(f"New value for state command: {value}")
+        except Exception as e:
+            log.error("Failed to send email: %s", e)
+            await self.set_tag("last_send_status", "error")
+            await self.set_tag("last_send_time", datetime.now(timezone.utc).isoformat())
+            await self.set_tag("last_error", str(e))
+
+    def _build_message(self, data: dict) -> MIMEMultipart:
+        """Construct the MIME email message from the channel data."""
+        msg = MIMEMultipart()
+
+        # From
+        from_name = self.config.from_name.value or ""
+        from_address = self.config.from_address.value
+        if from_name:
+            msg["From"] = formataddr((from_name, from_address))
+        else:
+            msg["From"] = from_address
+
+        # To
+        to = data.get("to", [])
+        if isinstance(to, str):
+            to = [to]
+        msg["To"] = ", ".join(to)
+
+        # CC
+        cc = data.get("cc")
+        if cc:
+            if isinstance(cc, str):
+                cc = [cc]
+            msg["Cc"] = ", ".join(cc)
+
+        # Subject
+        msg["Subject"] = data.get("subject", "(no subject)")
+
+        # Body
+        body = data.get("body", "")
+        is_html = data.get("html", False)
+        if is_html:
+            msg.attach(MIMEText(body, "html"))
+        else:
+            msg.attach(MIMEText(body, "plain"))
+
+        # Attachments
+        attachments = data.get("attachments", [])
+        for attachment in attachments:
+            filename = attachment.get("filename", "attachment")
+            content_b64 = attachment.get("content", "")
+            mime_type = attachment.get("mime_type", "application/octet-stream")
+
+            maintype, _, subtype = mime_type.partition("/")
+            part = MIMEBase(maintype, subtype or "octet-stream")
+            part.set_payload(base64.b64decode(content_b64))
+            encoders.encode_base64(part)
+            part.add_header(
+                "Content-Disposition",
+                "attachment",
+                filename=filename,
+            )
+            msg.attach(part)
+
+        return msg
+
+    def _send_message(self, msg: MIMEMultipart, data: dict):
+        """Connect to SMTP and send the email."""
+        host = self.config.smtp_host.value
+        port = self.config.smtp_port.value
+        username = self.config.smtp_username.value
+        password = self.config.smtp_password.value
+        use_tls = self.config.smtp_use_tls.value
+
+        # Build recipient list
+        to = data.get("to", [])
+        if isinstance(to, str):
+            to = [to]
+        cc = data.get("cc", [])
+        if isinstance(cc, str):
+            cc = [cc]
+        recipients = to + cc
+
+        server = smtplib.SMTP(host, port, timeout=30)
+        try:
+            if use_tls:
+                server.starttls()
+            server.login(username, password)
+            server.sendmail(
+                self.config.from_address.value,
+                recipients,
+                msg.as_string(),
+            )
+        finally:
+            server.quit()

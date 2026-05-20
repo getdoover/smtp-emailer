@@ -172,3 +172,8 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Doover build outputs
+packages_export/
+package.zip
+requirements.txt
