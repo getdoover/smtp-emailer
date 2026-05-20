@@ -5,7 +5,7 @@ from pydoover.processor import ManySubscriptionConfig
 
 
 class SmtpEmailerConfig(config.Schema):
-    subscription = ManySubscriptionConfig()
+    subscription = ManySubscriptionConfig(default=["send-email"])
 
     smtp_host = config.String(
         "SMTP Host",

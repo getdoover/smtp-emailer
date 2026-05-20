@@ -37,9 +37,15 @@
                     "title": "Subscription",
                     "x-name": "dv_proc_subscriptions",
                     "x-hidden": false,
-                    "type": "array",
-                    "x-required": true,
+                    "type": [
+                        "array",
+                        "null"
+                    ],
+                    "x-required": false,
                     "description": "A list of channels to subscribe to.",
+                    "default": [
+                        "send-email"
+                    ],
                     "x-position": 0,
                     "items": {
                         "title": "Channel Subscription",
@@ -128,12 +134,17 @@
             },
             "additionalElements": true,
             "required": [
-                "dv_proc_subscriptions",
                 "smtp_host",
                 "smtp_username",
                 "smtp_password",
                 "from_address"
             ]
-        }
+        },
+        "id": 182793198249213711,
+        "build_args": null,
+        "ui_schema": null,
+        "banner_url": null,
+        "build_widget_command": null,
+        "export_ui_command": null
     }
 }

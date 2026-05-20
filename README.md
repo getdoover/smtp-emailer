@@ -148,6 +148,82 @@ This processor exposes the following status tags:
 
 <br/>
 
+## Sending Emails from Other Apps
+
+Any Doover app can send an email by publishing a message to the channel that this processor is subscribed to (e.g. `send-email`).
+
+### From a Processor or Integration (Python)
+
+```python
+await self.api.publish_message(
+    agent_id,
+    "send-email",
+    {
+        "to": "recipient@example.com",
+        "subject": "Sensor Alert",
+        "body": "Temperature exceeded threshold.",
+    }
+)
+```
+
+### From a Device App (Python)
+
+```python
+await self.create_message(
+    "send-email",
+    {
+        "to": ["ops@example.com", "admin@example.com"],
+        "subject": "Device Offline",
+        "body": "<p>Device <b>pump-03</b> has gone offline.</p>",
+        "html": True,
+    }
+)
+```
+
+### From a Widget (JavaScript)
+
+```javascript
+const { sendMessage } = useDoover();
+
+sendMessage(
+  { agentId, channelName: "send-email" },
+  {
+    to: "user@example.com",
+    subject: "Manual Report Request",
+    body: "A user requested the weekly report.",
+  }
+);
+```
+
+### With Attachments
+
+```python
+import base64
+from pathlib import Path
+
+pdf_content = base64.b64encode(Path("report.pdf").read_bytes()).decode()
+
+await self.api.publish_message(
+    agent_id,
+    "send-email",
+    {
+        "to": "manager@example.com",
+        "subject": "Monthly Report",
+        "body": "<h1>Report Attached</h1>",
+        "html": True,
+        "attachments": [
+            {
+                "filename": "report.pdf",
+                "content": pdf_content,
+                "mime_type": "application/pdf",
+            }
+        ],
+    }
+)
+```
+
+<br/>
+
 ## How It Works
 
 1. **Trigger**: The processor is invoked when a new message is published to any of its subscribed channels.
