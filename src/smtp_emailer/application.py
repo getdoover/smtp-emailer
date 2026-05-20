@@ -30,16 +30,20 @@ class SmtpEmailerApplication(Application):
 
     async def on_message_create(self, event: MessageCreateEvent):
         """Handle incoming email send requests."""
+        log.info("on_message_create triggered, channel: %s", event.channel.name)
         data = event.message.data
+        log.info("Message data: %s", data)
+
         if not data:
             log.warning("Received message with no data, skipping")
             return
 
         try:
+            log.info("Building MIME message...")
             msg = self._build_message(data)
+            log.info("Sending via SMTP to %s...", data.get("to"))
             self._send_message(msg, data)
 
-            # Update success tags
             send_count = self.get_tag("send_count", 0)
             await self.set_tag("send_count", send_count + 1)
             await self.set_tag("last_send_status", "success")
@@ -49,7 +53,7 @@ class SmtpEmailerApplication(Application):
             log.info("Email sent successfully to %s", data.get("to"))
 
         except Exception as e:
-            log.error("Failed to send email: %s", e)
+            log.error("Failed to send email: %s", e, exc_info=True)
             await self.set_tag("last_send_status", "error")
             await self.set_tag("last_send_time", datetime.now(timezone.utc).isoformat())
             await self.set_tag("last_error", str(e))
@@ -116,7 +120,7 @@ class SmtpEmailerApplication(Application):
         port = self.config.smtp_port.value
         username = self.config.smtp_username.value
         password = self.config.smtp_password.value
-        use_tls = self.config.smtp_use_tls.value
+        use_tls = self.config.use_starttls.value
 
         # Build recipient list
         to = data.get("to", [])

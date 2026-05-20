@@ -24,7 +24,7 @@ class SmtpEmailerConfig(config.Schema):
         "SMTP Password",
         description="SMTP authentication password",
     )
-    smtp_use_tls = config.Boolean(
+    use_starttls = config.Boolean(
         "Use STARTTLS",
         description="Use STARTTLS for the connection",
         default=True,
