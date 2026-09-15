@@ -5,7 +5,7 @@
         "type": "PRO",
         "visibility": "PUB",
         "allow_many": true,
-        "description": "Sends emails via SMTP when a message is published to the send-email channel. Supports recipient, subject, body, cc, and attachment fields.",
+        "description": "Sends an email via your SMTP account whenever a message is published to a channel it watches (send-email by default). Takes recipients, subject, plain-text or HTML body, CC and file attachments.",
         "long_description": "README.md",
         "depends_on": [],
         "handler": "src.smtp_emailer.handler",
