@@ -9,6 +9,7 @@ It runs in the Doover cloud, so there is nothing to install on a Doovit and noth
 <p align="left">
   <img src="https://raw.githubusercontent.com/getdoover/smtp-emailer/main/assets/app-types/app-type-cloud-monochrome.png?v=27dc0b69626d" alt="App Type: Cloud — Processes in the cloud" align="left" width="180" height="180">
   <img src="https://raw.githubusercontent.com/getdoover/smtp-emailer/main/assets/app-types/ui-backend-monochrome.png?v=a3e66ef41381" alt="UI: Backend — Does not have a User Interface" align="left" width="180" height="180">
+  <img src="https://raw.githubusercontent.com/getdoover/smtp-emailer/main/assets/app-types/badge-external-protocol-egress-monochrome.png?v=4533d9447296" alt="External Protocol — Sends data via protocol" align="left" width="180" height="180">
 </p>
 <br clear="all">
 
