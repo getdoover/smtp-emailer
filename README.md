@@ -4,17 +4,6 @@ SMTP Emailer turns a channel message into a real email. Publish a small JSON mes
 
 It runs in the Doover cloud, so there is nothing to install on a Doovit and nothing to build. It has no device page of its own: it works entirely off the channel it listens to, and reports what it did through its tags.
 
----
-
-<p align="left">
-  <img src="https://raw.githubusercontent.com/getdoover/smtp-emailer/main/assets/app-types/app-type-cloud-monochrome.png?v=27dc0b69626d" alt="App Type: Cloud — Processes in the cloud" align="left" width="180" height="180">
-  <img src="https://raw.githubusercontent.com/getdoover/smtp-emailer/main/assets/app-types/ui-backend-monochrome.png?v=a3e66ef41381" alt="UI: Backend — Does not have a User Interface" align="left" width="180" height="180">
-  <img src="https://raw.githubusercontent.com/getdoover/smtp-emailer/main/assets/app-types/badge-external-protocol-egress-monochrome.png?v=4533d9447296" alt="External Protocol — Sends data via protocol" align="left" width="180" height="180">
-</p>
-<br clear="all">
-
----
-
 - **Send on a channel message.** Each new message published to a watched channel, carrying the fields below, becomes one email.
 - **Plain text or HTML.** Set `"html": true` in the message to send the body as HTML.
 - **Several recipients, plus CC.** `to` and `cc` each take a single address or a list of addresses.
